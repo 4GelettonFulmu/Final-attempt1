@@ -49,8 +49,8 @@
     <script>
         // Configuration
         const CONFIG = {
-            dotSize: 8,
-            dotSpacing: 10,
+            dotSize: 4,
+            dotSpacing: 5,
             maxLayers: 10,
             layerOpacity: 0.5,
             colors: ['#FF0000', '#FFFF00', '#0000FF', '#00FF00'], // red, yellow, blue, green
@@ -90,7 +90,7 @@
                         const pixelY = Math.floor(y * CONFIG.dotSpacing);
                         const brightness = this.getBrightness(pixelX, pixelY);
 
-                        if (brightness > 0.1) {
+                        if (brightness > 0.05) {
                             dots.push({
                                 x: pixelX,
                                 y: pixelY,
@@ -234,7 +234,7 @@
 
                     const brightness = getBrightnessFromImageData(imageData, videoX, videoY, debugCanvas.width);
 
-                    if (brightness > 0.1) {
+                    if (brightness > 0.05) {
                         const radius = (CONFIG.dotSize / 2) * brightness;
                         const dotX = x * CONFIG.dotSpacing;
                         const dotY = y * CONFIG.dotSpacing;

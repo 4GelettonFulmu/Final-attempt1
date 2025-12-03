@@ -83,8 +83,8 @@ A fullscreen, text-free interactive application that transforms live webcam foot
 
 The application includes configurable parameters in the `CONFIG` object:
 
-- `dotSize`: Size of halftone dots (default: 8px)
-- `dotSpacing`: Spacing between dots (default: 10px)
+- `dotSize`: Size of halftone dots (default: 4px)
+- `dotSpacing`: Spacing between dots (default: 5px)
 - `maxLayers`: Maximum number of frozen layers (default: 10)
 - `layerOpacity`: Opacity of each layer (default: 0.5)
 - `bottomZoneHeight`: Height of bottom zone for stacking (default: 0.25 or 25%)
