@@ -13,7 +13,7 @@
         }
 
         body {
-            background: #000;
+            background: #fff;
             width: 100vw;
             height: 100vh;
             position: fixed;
@@ -54,9 +54,9 @@
             maxLayers: 10,
             layerOpacity: 0.5,
             colors: ['#FF0000', '#FFFF00', '#0000FF', '#00FF00'], // red, yellow, blue, green
-            bottomZoneHeight: 0.25, // Bottom 25% of screen
-            swipeThreshold: 0.3, // 30% of screen width for swipe detection
-            swipeTimeWindow: 500 // milliseconds
+            gestureCooldown: 1000, // milliseconds between gesture triggers
+            handClosedThreshold: 0.1, // Distance threshold for fist detection
+            bottomZoneHeight: 0.25 // Bottom 25% of screen
         };
 
         // Global variables
@@ -65,16 +65,9 @@
         let isInitialized = false;
         let currentColorIndex = 0;
         let layers = [];
-
-        // Gesture tracking
-        let gestureState = {
-            isTracking: false,
-            startX: 0,
-            startY: 0,
-            startTime: 0,
-            currentX: 0,
-            currentY: 0
-        };
+        let lastGestureTime = 0;
+        let handPosition = { x: 0, y: 0 };
+        let showHandIndicator = false;
 
         // Layer class
         class HalftoneLayer {
@@ -198,20 +191,26 @@
             // Process hand gestures
             if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
                 const hand = results.multiHandLandmarks[0];
+                showHandIndicator = true;
+
+                // Get palm position for tracking
+                const wrist = hand[0];
+                handPosition.x = wrist.x * mainCanvas.width;
+                handPosition.y = wrist.y * mainCanvas.height;
+
                 processGesture(hand);
+
+                // Draw hand indicator
+                drawHandIndicator();
             } else {
-                // Reset gesture tracking when hand is not detected
-                if (gestureState.isTracking) {
-                    checkSwipeCompletion();
-                }
-                gestureState.isTracking = false;
+                showHandIndicator = false;
             }
         }
 
         // Draw live halftone effect
         function drawLiveHalftone() {
-            // Clear canvas
-            mainCtx.fillStyle = '#000';
+            // Clear canvas with white background
+            mainCtx.fillStyle = '#fff';
             mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
             // Draw video to debug canvas to extract pixel data
@@ -260,62 +259,103 @@
             return 1 - (avg / 255);
         }
 
-        // Process hand gesture
+        // Draw hand indicator
+        function drawHandIndicator() {
+            if (!showHandIndicator) return;
+
+            // Draw subtle circle at hand position
+            mainCtx.save();
+            mainCtx.globalAlpha = 0.3;
+            mainCtx.strokeStyle = CONFIG.colors[currentColorIndex];
+            mainCtx.lineWidth = 3;
+            mainCtx.beginPath();
+            mainCtx.arc(handPosition.x, handPosition.y, 30, 0, Math.PI * 2);
+            mainCtx.stroke();
+            mainCtx.restore();
+        }
+
+        // Process hand gesture - using simple finger counting
         function processGesture(hand) {
-            // Use index finger tip for gesture tracking
-            const indexTip = hand[8]; // Index finger tip landmark
-            const currentX = indexTip.x * mainCanvas.width;
-            const currentY = indexTip.y * mainCanvas.height;
-
-            if (!gestureState.isTracking) {
-                // Start tracking
-                gestureState.isTracking = true;
-                gestureState.startX = currentX;
-                gestureState.startY = currentY;
-                gestureState.startTime = Date.now();
+            // Check cooldown
+            const now = Date.now();
+            if (now - lastGestureTime < CONFIG.gestureCooldown) {
+                return;
             }
 
-            gestureState.currentX = currentX;
-            gestureState.currentY = currentY;
+            // Detect if hand is closed (fist) or open
+            const isHandClosed = detectFist(hand);
+            const isHandOpen = detectOpenHand(hand);
 
-            // Check for swipe completion
-            checkSwipeCompletion();
-        }
+            // Check if hand is in bottom zone
+            const isBottomZone = handPosition.y > mainCanvas.height * (1 - CONFIG.bottomZoneHeight);
 
-        // Check if swipe gesture is completed
-        function checkSwipeCompletion() {
-            if (!gestureState.isTracking) return;
-
-            const deltaX = gestureState.currentX - gestureState.startX;
-            const deltaY = Math.abs(gestureState.currentY - gestureState.startY);
-            const deltaTime = Date.now() - gestureState.startTime;
-            const swipeDistance = mainCanvas.width * CONFIG.swipeThreshold;
-
-            // Check for left-to-right swipe
-            if (deltaX > swipeDistance && deltaY < 100 && deltaTime < CONFIG.swipeTimeWindow) {
-                // Determine if swipe is in bottom zone
-                const isBottomZone = gestureState.startY > mainCanvas.height * (1 - CONFIG.bottomZoneHeight);
-
-                handleSwipe(isBottomZone);
-
-                // Reset gesture state
-                gestureState.isTracking = false;
-            } else if (deltaTime > CONFIG.swipeTimeWindow) {
-                // Timeout - reset
-                gestureState.isTracking = false;
+            if (isHandClosed) {
+                // Closed fist = Add layer to stack
+                freezeFrame(true);
+                lastGestureTime = now;
+                flashFeedback('#00FF00'); // Green flash
+            } else if (isHandOpen) {
+                // Open hand gesture
+                if (isBottomZone) {
+                    // In bottom zone: add to stack
+                    freezeFrame(true);
+                } else {
+                    // Not in bottom zone: replace all layers
+                    layers = [];
+                    freezeFrame(false);
+                }
+                lastGestureTime = now;
+                flashFeedback('#FFFF00'); // Yellow flash
             }
         }
 
-        // Handle swipe gesture
-        function handleSwipe(isBottomZone) {
-            if (isBottomZone) {
-                // Add layer to stack
-                freezeFrame();
-            } else {
-                // Replace all layers with single new layer
-                layers = [];
-                freezeFrame();
+        // Detect closed fist
+        function detectFist(hand) {
+            // Check if all fingertips are close to palm
+            const palm = hand[0]; // Wrist
+            const fingertips = [4, 8, 12, 16, 20]; // Thumb, Index, Middle, Ring, Pinky tips
+
+            let closedCount = 0;
+            for (let tip of fingertips) {
+                const dx = hand[tip].x - palm.x;
+                const dy = hand[tip].y - palm.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance < CONFIG.handClosedThreshold) {
+                    closedCount++;
+                }
             }
+
+            return closedCount >= 4; // At least 4 fingers closed
+        }
+
+        // Detect open hand
+        function detectOpenHand(hand) {
+            // Check if all fingertips are far from palm
+            const palm = hand[0]; // Wrist
+            const fingertips = [4, 8, 12, 16, 20]; // Thumb, Index, Middle, Ring, Pinky tips
+
+            let extendedCount = 0;
+            for (let tip of fingertips) {
+                const dx = hand[tip].x - palm.x;
+                const dy = hand[tip].y - palm.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+
+                if (distance > CONFIG.handClosedThreshold + 0.05) {
+                    extendedCount++;
+                }
+            }
+
+            return extendedCount >= 4; // At least 4 fingers extended
+        }
+
+        // Flash feedback when gesture is detected
+        function flashFeedback(color) {
+            mainCtx.save();
+            mainCtx.globalAlpha = 0.15;
+            mainCtx.fillStyle = color;
+            mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
+            mainCtx.restore();
         }
 
         // Freeze current frame as a layer
