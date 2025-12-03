@@ -1,95 +1,98 @@
-# Interactive Webcam Halftone Dots
+# Gesture-Controlled Halftone Webcam Application
 
-An interactive web application that captures live webcam video and displays it as a dynamic halftone pattern using individual dots. The dots respond to your voice volume by changing color and vibrating.
+A fullscreen, text-free interactive application that transforms live webcam footage into a halftone visual experience, controlled entirely through hand gestures.
 
 ## Features
 
-- **Live Webcam Capture**: Real-time video processing from your webcam
-- **Halftone Effect**: Video is rendered as individual black and white dots
-- **Independent Dot Elements**: Each dot is a separate object that can move and change color independently
-- **Audio Reactivity**: Dots change color based on voice/sound volume
-- **Vibration Effect**: Loud sounds cause dots to vibrate
-- **Adjustable Parameters**:
-  - Dot size (4-20 pixels)
-  - Audio sensitivity (0.5-5x)
-- **Visual Volume Meter**: Real-time display of audio input level
+### Visual Style
+- Real-time halftone dot pattern effect applied to live webcam feed
+- Limited color palette: red, yellow, blue, and green
+- Only one color displayed at a time
+- All halftone layers maintain 50% opacity for visual blending
+- Completely fullscreen with no UI elements or text
 
-## How It Works
+### Gesture Interactions
+- **Left-to-right swipe anywhere on screen**: Freezes current frame and replaces all existing layers with a new halftone layer
+- **Left-to-right swipe in bottom zone** (bottom 25% of screen): Adds a new frozen layer on top of existing layers
+- Automatic color cycling through: red → yellow → blue → green → red
 
-1. **Halftone Processing**: The webcam video is analyzed pixel by pixel, and brightness values are calculated for each dot region
-2. **Audio Analysis**: Microphone input is processed using the Web Audio API to calculate volume levels
-3. **Color Mapping**: When volume exceeds threshold:
-   - Low volume (quiet): Green dots
-   - Medium volume: Yellow dots
-   - High volume (loud): Red dots
-   - No sound: Black and white halftone
-4. **Vibration**: Each dot independently vibrates with a phase-shifted sinusoidal motion proportional to volume
+### Layering Behavior
+- Each frozen frame transforms into a semi-transparent halftone layer
+- Multiple swipes create overlapping compositions
+- Colors blend naturally through 50% transparency stacking
+- Maximum of 10 layers (oldest layer is removed when limit is reached)
 
 ## Usage
 
 ### Running the Application
 
-1. Open `index.html` in a modern web browser (Chrome, Firefox, Edge, or Safari)
-2. Click the "Start Webcam & Audio" button
-3. Grant permissions for webcam and microphone access when prompted
-4. Speak, sing, or make sounds to see the dots react!
+1. Open `index.html` in a modern web browser (Chrome, Edge, or Firefox recommended)
+2. Grant camera permissions when prompted
+3. The application will automatically enter fullscreen mode
+4. Use your index finger to perform left-to-right swipe gestures:
+   - Swipe from left to right in the **middle/top area** to create a single layer (clears previous layers)
+   - Swipe from left to right in the **bottom 25% of screen** to add layers on top of existing ones
 
-### Controls
+### Keyboard Shortcuts
 
-- **Start Webcam & Audio**: Initializes the webcam and microphone
-- **Stop**: Stops the application and releases camera/microphone
-- **Dot Size Slider**: Adjusts the size of halftone dots (larger = fewer dots, more abstract)
-- **Audio Sensitivity Slider**: Controls how responsive dots are to sound (higher = more reactive)
+- **R** or **C**: Clear all frozen layers and reset to initial state
 
-### Tips
+### Gesture Tips
 
-- For best results, use good lighting
-- Start with default sensitivity and adjust as needed
-- Try different dot sizes for various artistic effects
-- Experiment with different sounds (whisper, shout, music, clapping)
+- Ensure your hand is well-lit and visible to the camera
+- Use your index finger to perform gestures
+- Swipe at a moderate speed (not too fast or slow)
+- The swipe must cover at least 30% of the screen width
+- Complete the swipe within 500 milliseconds
 
 ## Technical Details
 
 ### Technologies Used
 
-- **HTML5 Canvas**: For rendering the halftone dots
-- **Web Audio API**: For real-time audio analysis
-- **MediaDevices API**: For webcam and microphone access
-- **JavaScript ES6+**: For dot management and animations
+- **HTML5 Canvas**: For rendering halftone dots and layers
+- **MediaDevices API**: For real-time webcam access
+- **MediaPipe Hands**: For accurate hand tracking and gesture recognition
+- **JavaScript ES6+**: For layer management and gesture processing
 
 ### Key Components
 
-- **Dot Class**: Each dot is an independent object with:
-  - Position (base and offset for vibration)
-  - Brightness (from video)
-  - Color (RGB values with smooth transitions)
-  - Vibration phase (for unique movement patterns)
+- **HalftoneLayer Class**: Each frozen layer contains:
+  - Captured frame image data
+  - Color assignment (red, yellow, blue, or green)
+  - Pre-calculated halftone dots with brightness mapping
+  - 50% opacity for blending
 
-- **Animation Loop**: 60 FPS rendering using `requestAnimationFrame`
-- **Audio Analysis**: FFT-based frequency analysis with 256 samples
-- **Color System**: HSL to RGB conversion for smooth color gradients
+- **Gesture Recognition**: Custom swipe detection system
+  - Tracks index finger position
+  - Calculates swipe distance and direction
+  - Detects bottom zone vs. full screen swipes
+
+- **Real-time Processing**: Live halftone rendering at camera frame rate
+- **Layer System**: Efficient stacking with automatic color cycling
+
+### Configuration Options
+
+The application includes configurable parameters in the `CONFIG` object:
+
+- `dotSize`: Size of halftone dots (default: 8px)
+- `dotSpacing`: Spacing between dots (default: 10px)
+- `maxLayers`: Maximum number of frozen layers (default: 10)
+- `layerOpacity`: Opacity of each layer (default: 0.5)
+- `bottomZoneHeight`: Height of bottom zone for stacking (default: 0.25 or 25%)
+- `swipeThreshold`: Minimum swipe distance as percentage of screen width (default: 0.3 or 30%)
+- `swipeTimeWindow`: Maximum time for swipe gesture in milliseconds (default: 500ms)
 
 ### Browser Compatibility
 
-- Chrome/Edge: ✓ Full support
-- Firefox: ✓ Full support
-- Safari: ✓ Full support (iOS may require user interaction)
-- Opera: ✓ Full support
+- Chrome/Edge 90+: ✓ Full support
+- Firefox 88+: ✓ Full support
+- Safari: Limited (MediaPipe support may vary)
 
-**Note**: HTTPS or localhost is required for webcam/microphone access in most browsers.
-
-## Customization
-
-You can modify the code to:
-
-- Change color schemes (modify the `hslToRgb` hue range)
-- Adjust vibration patterns (modify `vibrationPhase` calculations)
-- Add different effects (trails, glow, etc.)
-- Change dot shapes (squares, triangles, etc.)
+**Note**: HTTPS or localhost is required for webcam access in most browsers.
 
 ## Privacy
 
-All video and audio processing happens locally in your browser. No data is sent to any server.
+All video processing happens locally in your browser. No data is sent to any server. MediaPipe Hands runs entirely client-side.
 
 ## License
 

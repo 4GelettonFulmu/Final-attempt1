@@ -3,86 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Interactive Webcam Halftone Dots</title>
+    <title>Gesture Halftone</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            overflow: hidden;
         }
 
         body {
-            font-family: 'Arial', sans-serif;
-            background: #1a1a1a;
-            color: #fff;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        h1 {
-            margin-bottom: 20px;
-            font-size: 2em;
-            text-align: center;
-        }
-
-        .controls {
-            margin-bottom: 20px;
-            display: flex;
-            gap: 15px;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-        }
-
-        button {
-            padding: 12px 24px;
-            font-size: 16px;
-            background: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-            transition: background 0.3s;
-        }
-
-        button:hover {
-            background: #45a049;
-        }
-
-        button:disabled {
-            background: #666;
-            cursor: not-allowed;
-        }
-
-        .slider-container {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .slider-container label {
-            font-size: 14px;
-        }
-
-        input[type="range"] {
-            width: 150px;
-        }
-
-        #canvasContainer {
-            position: relative;
-            display: inline-block;
             background: #000;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
         }
 
-        #dotCanvas {
+        #mainCanvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
             display: block;
         }
 
@@ -90,172 +32,104 @@
             display: none;
         }
 
-        .info {
-            margin-top: 20px;
-            text-align: center;
-            font-size: 14px;
-            color: #aaa;
-        }
-
-        .volume-meter {
-            width: 200px;
-            height: 20px;
-            background: #333;
-            border-radius: 10px;
-            overflow: hidden;
-            position: relative;
-        }
-
-        .volume-bar {
-            height: 100%;
-            background: linear-gradient(to right, #4CAF50, #FFC107, #FF5722);
-            width: 0%;
-            transition: width 0.1s;
-        }
-
-        .status {
-            padding: 10px;
-            background: #333;
-            border-radius: 5px;
-            margin-top: 10px;
-            font-size: 14px;
+        #debugCanvas {
+            display: none;
         }
     </style>
 </head>
 <body>
-    <h1>Interactive Webcam Halftone Dots</h1>
-
-    <div class="controls">
-        <button id="startBtn" onclick="start()">Start Webcam & Audio</button>
-        <button id="stopBtn" onclick="stop()" disabled>Stop</button>
-
-        <div class="slider-container">
-            <label for="dotSize">Dot Size: <span id="dotSizeValue">8</span></label>
-            <input type="range" id="dotSize" min="4" max="20" value="8" step="1">
-        </div>
-
-        <div class="slider-container">
-            <label for="sensitivity">Audio Sensitivity: <span id="sensitivityValue">1.5</span></label>
-            <input type="range" id="sensitivity" min="0.5" max="5" value="1.5" step="0.1">
-        </div>
-    </div>
-
-    <div class="volume-meter">
-        <div class="volume-bar" id="volumeBar"></div>
-    </div>
-
-    <div id="canvasContainer">
-        <canvas id="dotCanvas"></canvas>
-    </div>
-
+    <canvas id="mainCanvas"></canvas>
     <video id="videoElement" autoplay playsinline></video>
+    <canvas id="debugCanvas"></canvas>
 
-    <div class="status" id="status">Click "Start" to begin</div>
-
-    <div class="info">
-        Speak or make sounds to see the halftone dots change color and vibrate!
-    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
 
     <script>
-        // Global variables
-        let video, canvas, ctx;
-        let dots = [];
-        let animationId;
-        let audioContext, analyser, microphone, dataArray;
-        let isRunning = false;
-        let dotSize = 8;
-        let sensitivity = 1.5;
-        let currentVolume = 0;
+        // Configuration
+        const CONFIG = {
+            dotSize: 8,
+            dotSpacing: 10,
+            maxLayers: 10,
+            layerOpacity: 0.5,
+            colors: ['#FF0000', '#FFFF00', '#0000FF', '#00FF00'], // red, yellow, blue, green
+            bottomZoneHeight: 0.25, // Bottom 25% of screen
+            swipeThreshold: 0.3, // 30% of screen width for swipe detection
+            swipeTimeWindow: 500 // milliseconds
+        };
 
-        // Dot class - each dot is an independent element
-        class Dot {
-            constructor(x, y, size) {
-                this.x = x;
-                this.y = y;
-                this.size = size;
-                this.baseX = x;
-                this.baseY = y;
-                this.brightness = 0;
-                this.color = { r: 255, g: 255, b: 255 };
-                this.targetColor = { r: 255, g: 255, b: 255 };
-                this.offsetX = 0;
-                this.offsetY = 0;
-                this.vibrationPhase = Math.random() * Math.PI * 2;
+        // Global variables
+        let video, mainCanvas, mainCtx, debugCanvas, debugCtx;
+        let hands, camera;
+        let isInitialized = false;
+        let currentColorIndex = 0;
+        let layers = [];
+
+        // Gesture tracking
+        let gestureState = {
+            isTracking: false,
+            startX: 0,
+            startY: 0,
+            startTime: 0,
+            currentX: 0,
+            currentY: 0
+        };
+
+        // Layer class
+        class HalftoneLayer {
+            constructor(imageData, color, width, height) {
+                this.imageData = imageData;
+                this.color = color;
+                this.width = width;
+                this.height = height;
+                this.dots = this.generateDots();
             }
 
-            update(brightness, volume) {
-                this.brightness = brightness;
+            generateDots() {
+                const dots = [];
+                const cols = Math.floor(this.width / CONFIG.dotSpacing);
+                const rows = Math.floor(this.height / CONFIG.dotSpacing);
 
-                // Update color based on volume
-                if (volume > 0.1) {
-                    // Map volume to color (green -> yellow -> red)
-                    const hue = (1 - Math.min(volume, 1)) * 120; // 120 = green, 0 = red
-                    const rgb = this.hslToRgb(hue / 360, 1, 0.5);
-                    this.targetColor = { r: rgb[0], g: rgb[1], b: rgb[2] };
-                } else {
-                    // Return to black/white
-                    const gray = Math.floor(brightness * 255);
-                    this.targetColor = { r: gray, g: gray, b: gray };
+                for (let y = 0; y < rows; y++) {
+                    for (let x = 0; x < cols; x++) {
+                        const pixelX = Math.floor(x * CONFIG.dotSpacing);
+                        const pixelY = Math.floor(y * CONFIG.dotSpacing);
+                        const brightness = this.getBrightness(pixelX, pixelY);
+
+                        if (brightness > 0.1) {
+                            dots.push({
+                                x: pixelX,
+                                y: pixelY,
+                                radius: (CONFIG.dotSize / 2) * brightness
+                            });
+                        }
+                    }
                 }
+                return dots;
+            }
 
-                // Smooth color transition
-                this.color.r += (this.targetColor.r - this.color.r) * 0.2;
-                this.color.g += (this.targetColor.g - this.color.g) * 0.2;
-                this.color.b += (this.targetColor.b - this.color.b) * 0.2;
-
-                // Vibration effect based on volume
-                if (volume > 0.05) {
-                    const vibrationIntensity = volume * 3;
-                    this.vibrationPhase += 0.3;
-                    this.offsetX = Math.sin(this.vibrationPhase) * vibrationIntensity;
-                    this.offsetY = Math.cos(this.vibrationPhase * 1.3) * vibrationIntensity;
-                } else {
-                    // Smoothly return to original position
-                    this.offsetX *= 0.9;
-                    this.offsetY *= 0.9;
-                }
+            getBrightness(x, y) {
+                const index = (y * this.width + x) * 4;
+                const r = this.imageData.data[index];
+                const g = this.imageData.data[index + 1];
+                const b = this.imageData.data[index + 2];
+                const avg = (r + g + b) / 3;
+                return 1 - (avg / 255); // Invert for halftone effect
             }
 
             draw(ctx) {
-                const radius = (this.size / 2) * this.brightness;
-                if (radius > 0.5) {
-                    ctx.fillStyle = `rgb(${Math.floor(this.color.r)}, ${Math.floor(this.color.g)}, ${Math.floor(this.color.b)})`;
+                ctx.save();
+                ctx.globalAlpha = CONFIG.layerOpacity;
+                ctx.fillStyle = this.color;
+
+                this.dots.forEach(dot => {
                     ctx.beginPath();
-                    ctx.arc(
-                        this.baseX + this.offsetX,
-                        this.baseY + this.offsetY,
-                        radius,
-                        0,
-                        Math.PI * 2
-                    );
+                    ctx.arc(dot.x, dot.y, dot.radius, 0, Math.PI * 2);
                     ctx.fill();
-                }
-            }
+                });
 
-            // HSL to RGB conversion
-            hslToRgb(h, s, l) {
-                let r, g, b;
-
-                if (s === 0) {
-                    r = g = b = l;
-                } else {
-                    const hue2rgb = (p, q, t) => {
-                        if (t < 0) t += 1;
-                        if (t > 1) t -= 1;
-                        if (t < 1/6) return p + (q - p) * 6 * t;
-                        if (t < 1/2) return q;
-                        if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-                        return p;
-                    };
-
-                    const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-                    const p = 2 * l - q;
-                    r = hue2rgb(p, q, h + 1/3);
-                    g = hue2rgb(p, q, h);
-                    b = hue2rgb(p, q, h - 1/3);
-                }
-
-                return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
+                ctx.restore();
             }
         }
 
@@ -263,206 +137,281 @@
         async function initWebcam() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { width: 640, height: 480 },
-                    audio: false
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        facingMode: 'user'
+                    }
                 });
                 video.srcObject = stream;
-                await new Promise(resolve => {
+
+                return new Promise((resolve) => {
                     video.onloadedmetadata = () => {
                         video.play();
-                        resolve();
+                        resolve(true);
                     };
                 });
-                return true;
             } catch (err) {
                 console.error('Error accessing webcam:', err);
-                document.getElementById('status').textContent = 'Error: Unable to access webcam';
                 return false;
             }
         }
 
-        // Initialize audio
-        async function initAudio() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                analyser = audioContext.createAnalyser();
-                microphone = audioContext.createMediaStreamSource(stream);
+        // Initialize MediaPipe Hands
+        function initMediaPipe() {
+            hands = new Hands({
+                locateFile: (file) => {
+                    return `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`;
+                }
+            });
 
-                analyser.fftSize = 256;
-                const bufferLength = analyser.frequencyBinCount;
-                dataArray = new Uint8Array(bufferLength);
+            hands.setOptions({
+                maxNumHands: 1,
+                modelComplexity: 1,
+                minDetectionConfidence: 0.7,
+                minTrackingConfidence: 0.7
+            });
 
-                microphone.connect(analyser);
+            hands.onResults(onHandsResults);
 
-                return true;
-            } catch (err) {
-                console.error('Error accessing microphone:', err);
-                document.getElementById('status').textContent = 'Error: Unable to access microphone';
-                return false;
+            camera = new Camera(video, {
+                onFrame: async () => {
+                    await hands.send({ image: video });
+                },
+                width: 1280,
+                height: 720
+            });
+
+            camera.start();
+        }
+
+        // Process hand tracking results
+        function onHandsResults(results) {
+            if (!isInitialized) return;
+
+            // Draw current webcam frame with halftone effect
+            drawLiveHalftone();
+
+            // Draw all frozen layers
+            layers.forEach(layer => layer.draw(mainCtx));
+
+            // Process hand gestures
+            if (results.multiHandLandmarks && results.multiHandLandmarks.length > 0) {
+                const hand = results.multiHandLandmarks[0];
+                processGesture(hand);
+            } else {
+                // Reset gesture tracking when hand is not detected
+                if (gestureState.isTracking) {
+                    checkSwipeCompletion();
+                }
+                gestureState.isTracking = false;
             }
         }
 
-        // Initialize canvas and dots
-        function initCanvas() {
-            canvas.width = video.videoWidth;
-            canvas.height = video.videoHeight;
+        // Draw live halftone effect
+        function drawLiveHalftone() {
+            // Clear canvas
+            mainCtx.fillStyle = '#000';
+            mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
-            dots = [];
-            const cols = Math.floor(canvas.width / dotSize);
-            const rows = Math.floor(canvas.height / dotSize);
+            // Draw video to debug canvas to extract pixel data
+            debugCtx.drawImage(video, 0, 0, debugCanvas.width, debugCanvas.height);
+            const imageData = debugCtx.getImageData(0, 0, debugCanvas.width, debugCanvas.height);
+
+            // Get current color
+            const currentColor = CONFIG.colors[currentColorIndex];
+
+            // Draw halftone dots
+            mainCtx.globalAlpha = CONFIG.layerOpacity;
+            mainCtx.fillStyle = currentColor;
+
+            const cols = Math.floor(mainCanvas.width / CONFIG.dotSpacing);
+            const rows = Math.floor(mainCanvas.height / CONFIG.dotSpacing);
 
             for (let y = 0; y < rows; y++) {
                 for (let x = 0; x < cols; x++) {
-                    const dotX = x * dotSize + dotSize / 2;
-                    const dotY = y * dotSize + dotSize / 2;
-                    dots.push(new Dot(dotX, dotY, dotSize));
+                    const videoX = Math.floor((x * CONFIG.dotSpacing / mainCanvas.width) * debugCanvas.width);
+                    const videoY = Math.floor((y * CONFIG.dotSpacing / mainCanvas.height) * debugCanvas.height);
+
+                    const brightness = getBrightnessFromImageData(imageData, videoX, videoY, debugCanvas.width);
+
+                    if (brightness > 0.1) {
+                        const radius = (CONFIG.dotSize / 2) * brightness;
+                        const dotX = x * CONFIG.dotSpacing;
+                        const dotY = y * CONFIG.dotSpacing;
+
+                        mainCtx.beginPath();
+                        mainCtx.arc(dotX, dotY, radius, 0, Math.PI * 2);
+                        mainCtx.fill();
+                    }
                 }
             }
+
+            mainCtx.globalAlpha = 1.0;
         }
 
-        // Get brightness from video
-        function getBrightness(x, y) {
-            const videoCanvas = document.createElement('canvas');
-            const videoCtx = videoCanvas.getContext('2d');
-            videoCanvas.width = video.videoWidth;
-            videoCanvas.height = video.videoHeight;
+        // Get brightness from image data
+        function getBrightnessFromImageData(imageData, x, y, width) {
+            const index = (y * width + x) * 4;
+            const r = imageData.data[index] || 0;
+            const g = imageData.data[index + 1] || 0;
+            const b = imageData.data[index + 2] || 0;
+            const avg = (r + g + b) / 3;
+            return 1 - (avg / 255);
+        }
 
-            videoCtx.drawImage(video, 0, 0);
+        // Process hand gesture
+        function processGesture(hand) {
+            // Use index finger tip for gesture tracking
+            const indexTip = hand[8]; // Index finger tip landmark
+            const currentX = indexTip.x * mainCanvas.width;
+            const currentY = indexTip.y * mainCanvas.height;
 
-            const imageData = videoCtx.getImageData(
-                Math.floor(x - dotSize / 2),
-                Math.floor(y - dotSize / 2),
-                dotSize,
-                dotSize
-            );
-
-            let totalBrightness = 0;
-            for (let i = 0; i < imageData.data.length; i += 4) {
-                const r = imageData.data[i];
-                const g = imageData.data[i + 1];
-                const b = imageData.data[i + 2];
-                totalBrightness += (r + g + b) / 3;
+            if (!gestureState.isTracking) {
+                // Start tracking
+                gestureState.isTracking = true;
+                gestureState.startX = currentX;
+                gestureState.startY = currentY;
+                gestureState.startTime = Date.now();
             }
 
-            return 1 - (totalBrightness / (imageData.data.length / 4) / 255);
+            gestureState.currentX = currentX;
+            gestureState.currentY = currentY;
+
+            // Check for swipe completion
+            checkSwipeCompletion();
         }
 
-        // Get audio volume
-        function getVolume() {
-            if (!analyser) return 0;
+        // Check if swipe gesture is completed
+        function checkSwipeCompletion() {
+            if (!gestureState.isTracking) return;
 
-            analyser.getByteFrequencyData(dataArray);
+            const deltaX = gestureState.currentX - gestureState.startX;
+            const deltaY = Math.abs(gestureState.currentY - gestureState.startY);
+            const deltaTime = Date.now() - gestureState.startTime;
+            const swipeDistance = mainCanvas.width * CONFIG.swipeThreshold;
 
-            let sum = 0;
-            for (let i = 0; i < dataArray.length; i++) {
-                sum += dataArray[i];
+            // Check for left-to-right swipe
+            if (deltaX > swipeDistance && deltaY < 100 && deltaTime < CONFIG.swipeTimeWindow) {
+                // Determine if swipe is in bottom zone
+                const isBottomZone = gestureState.startY > mainCanvas.height * (1 - CONFIG.bottomZoneHeight);
+
+                handleSwipe(isBottomZone);
+
+                // Reset gesture state
+                gestureState.isTracking = false;
+            } else if (deltaTime > CONFIG.swipeTimeWindow) {
+                // Timeout - reset
+                gestureState.isTracking = false;
             }
-            const average = sum / dataArray.length;
-            return (average / 255) * sensitivity;
         }
 
-        // Animation loop
-        function animate() {
-            if (!isRunning) return;
+        // Handle swipe gesture
+        function handleSwipe(isBottomZone) {
+            if (isBottomZone) {
+                // Add layer to stack
+                freezeFrame();
+            } else {
+                // Replace all layers with single new layer
+                layers = [];
+                freezeFrame();
+            }
+        }
 
-            // Clear canvas
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // Freeze current frame as a layer
+        function freezeFrame() {
+            // Check layer limit
+            if (layers.length >= CONFIG.maxLayers) {
+                layers.shift(); // Remove oldest layer
+            }
 
-            // Get current volume
-            currentVolume = getVolume();
+            // Capture current frame
+            debugCtx.drawImage(video, 0, 0, debugCanvas.width, debugCanvas.height);
+            const imageData = debugCtx.getImageData(0, 0, debugCanvas.width, debugCanvas.height);
 
-            // Update volume meter
-            const volumeBar = document.getElementById('volumeBar');
-            volumeBar.style.width = (Math.min(currentVolume * 100, 100)) + '%';
+            // Create new layer with current color
+            const color = CONFIG.colors[currentColorIndex];
+            const layer = new HalftoneLayer(imageData, color, debugCanvas.width, debugCanvas.height);
 
-            // Update and draw each dot
-            dots.forEach((dot, index) => {
-                const brightness = getBrightness(dot.baseX, dot.baseY);
-                dot.update(brightness, currentVolume);
-                dot.draw(ctx);
+            // Scale dots to match main canvas
+            const scaleX = mainCanvas.width / debugCanvas.width;
+            const scaleY = mainCanvas.height / debugCanvas.height;
+            layer.dots.forEach(dot => {
+                dot.x *= scaleX;
+                dot.y *= scaleY;
             });
 
-            animationId = requestAnimationFrame(animate);
+            layers.push(layer);
+
+            // Cycle to next color
+            currentColorIndex = (currentColorIndex + 1) % CONFIG.colors.length;
         }
 
-        // Start function
-        async function start() {
-            if (isRunning) return;
+        // Clear all layers (keyboard shortcut)
+        function clearLayers() {
+            layers = [];
+            currentColorIndex = 0;
+        }
 
-            document.getElementById('status').textContent = 'Initializing...';
-            document.getElementById('startBtn').disabled = true;
+        // Initialize canvas
+        function initCanvas() {
+            mainCanvas.width = window.innerWidth;
+            mainCanvas.height = window.innerHeight;
 
-            const webcamOk = await initWebcam();
-            if (!webcamOk) {
-                document.getElementById('startBtn').disabled = false;
+            debugCanvas.width = video.videoWidth;
+            debugCanvas.height = video.videoHeight;
+        }
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (isInitialized) {
+                initCanvas();
+            }
+        });
+
+        // Keyboard shortcuts
+        window.addEventListener('keydown', (e) => {
+            if (e.key === 'r' || e.key === 'R' || e.key === 'c' || e.key === 'C') {
+                clearLayers();
+            }
+        });
+
+        // Initialize application
+        async function init() {
+            video = document.getElementById('videoElement');
+            mainCanvas = document.getElementById('mainCanvas');
+            mainCtx = mainCanvas.getContext('2d');
+            debugCanvas = document.getElementById('debugCanvas');
+            debugCtx = debugCanvas.getContext('2d');
+
+            const webcamReady = await initWebcam();
+            if (!webcamReady) {
+                console.error('Failed to initialize webcam');
                 return;
             }
 
-            const audioOk = await initAudio();
-            if (!audioOk) {
-                document.getElementById('startBtn').disabled = false;
-                return;
-            }
+            // Wait for video metadata
+            await new Promise(resolve => setTimeout(resolve, 500));
 
             initCanvas();
+            initMediaPipe();
 
-            isRunning = true;
-            document.getElementById('status').textContent = 'Running - Speak or make sounds!';
-            document.getElementById('stopBtn').disabled = false;
+            isInitialized = true;
 
-            animate();
+            // Request fullscreen
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log('Fullscreen request failed:', err);
+            });
         }
 
-        // Stop function
-        function stop() {
-            isRunning = false;
+        // Start on page load
+        window.addEventListener('load', init);
 
-            if (animationId) {
-                cancelAnimationFrame(animationId);
+        // Handle fullscreen changes
+        document.addEventListener('fullscreenchange', () => {
+            if (document.fullscreenElement && isInitialized) {
+                initCanvas();
             }
-
-            if (video.srcObject) {
-                video.srcObject.getTracks().forEach(track => track.stop());
-            }
-
-            if (audioContext) {
-                audioContext.close();
-            }
-
-            ctx.fillStyle = '#000';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            document.getElementById('status').textContent = 'Stopped';
-            document.getElementById('startBtn').disabled = false;
-            document.getElementById('stopBtn').disabled = true;
-            document.getElementById('volumeBar').style.width = '0%';
-        }
-
-        // Initialize on page load
-        window.addEventListener('load', () => {
-            video = document.getElementById('videoElement');
-            canvas = document.getElementById('dotCanvas');
-            ctx = canvas.getContext('2d');
-
-            // Set initial canvas size
-            canvas.width = 640;
-            canvas.height = 480;
-
-            // Slider event listeners
-            document.getElementById('dotSize').addEventListener('input', (e) => {
-                dotSize = parseInt(e.target.value);
-                document.getElementById('dotSizeValue').textContent = dotSize;
-                if (isRunning) {
-                    initCanvas();
-                }
-            });
-
-            document.getElementById('sensitivity').addEventListener('input', (e) => {
-                sensitivity = parseFloat(e.target.value);
-                document.getElementById('sensitivityValue').textContent = sensitivity.toFixed(1);
-            });
         });
     </script>
 </body>
