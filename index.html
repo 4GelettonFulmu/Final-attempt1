@@ -59,12 +59,12 @@
             bottomZoneHeight: 0.25, // Bottom 25% of screen
             contrastBoost: 2.0, // Greatly exaggerate brightness differences
             // Physics parameters - Tuned for subtle micro-fluctuations
-            springStiffness: 0.09, // High stiffness - dots tightly anchored (was 0.015)
-            damping: 0.94, // High damping - instant snap back, no wobble (was 0.88)
-            repulsionRadius: 60, // Smaller radius for localized effect (was 80)
-            repulsionStrength: 3.5, // Much weaker push - only 5-10px displacement (was 12)
+            springStiffness: 0.12, // Even higher stiffness - dots very tightly anchored (was 0.09)
+            damping: 0.95, // Very high damping - instant snap back (was 0.94)
+            repulsionRadius: 50, // Smaller radius for very localized effect (was 60)
+            repulsionStrength: 2.5, // Very weak push - max 10px displacement (was 3.5)
             motionThreshold: 15, // Minimum pixel difference to detect motion
-            ambientIntensity: 1.2, // Barely visible breathing - 1-2px movement (was 2.5)
+            ambientIntensity: 1.0, // Minimal breathing - ~1px movement (was 1.2)
             ambientSpeed: 0.0015, // Speed of ambient animation
             colorTransitionSpeed: 0.05 // Speed of color gradient transitions
         };

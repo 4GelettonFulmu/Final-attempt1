@@ -12,8 +12,8 @@ A fullscreen, text-free interactive application that transforms live webcam foot
 - Dramatic dot size variation: much larger dots for figures, minimal/no dots for background
 - Enhanced contrast algorithm creates striking visual separation
 - **Smooth gradient color transitions** between gesture actions (no flash overlays)
-- **Subtle ambient motion**: Background dots gently breathe (1-2px movement, barely visible)
-- **Micro-ripples**: Dots shift only 5-10px when motion detected, instant snap back
+- **Subtle ambient motion**: Background dots gently breathe (~1px movement, barely visible)
+- **Micro-ripples**: Dots shift maximum 10px when motion detected, instant snap back
 - Frozen layers display at 50% opacity for visual blending
 - Completely fullscreen with no UI elements or text
 
@@ -24,7 +24,7 @@ A fullscreen, text-free interactive application that transforms live webcam foot
 - Automatic color cycling through: red → blue → magenta → green → red
 - Visual hand position indicator (subtle circle) shows where your hand is detected
 - 1-second cooldown between gestures to prevent accidental triggers
-- **Motion-reactive dots**: Subtle micro-ripples respond to hand movements (5-10px displacement)
+- **Motion-reactive dots**: Subtle micro-ripples respond to hand movements (max 10px displacement)
 
 ### Freeze Frame Behavior
 - Each gesture creates a new translucent halftone snapshot (50% opacity)
@@ -46,7 +46,7 @@ A fullscreen, text-free interactive application that transforms live webcam foot
    - Each freeze replaces the previous frozen layer
 5. Watch the **smooth gradient color transitions** as you create freeze frames
 6. A subtle circle indicator shows where your hand is detected
-7. Move your hand to see **subtle micro-ripples** - dots shift slightly (5-10px) and snap back instantly
+7. Move your hand to see **subtle micro-ripples** - dots shift slightly (max 10px) and snap back instantly
 
 ### Keyboard Shortcuts
 
@@ -117,12 +117,12 @@ The application includes configurable parameters in the `CONFIG` object:
 - `contrastBoost`: Greatly exaggerates brightness differences (default: 2.0)
 
 **Physics Parameters (Tuned for Subtle Micro-Fluctuations):**
-- `springStiffness`: High stiffness - dots tightly anchored (default: 0.09, was 0.015)
-- `damping`: High damping - instant snap back, no wobble (default: 0.94, was 0.88)
-- `repulsionRadius`: Smaller radius for localized effect (default: 60px, was 80px)
-- `repulsionStrength`: Much weaker push - only 5-10px displacement (default: 3.5, was 12)
+- `springStiffness`: Very high stiffness - dots very tightly anchored (default: 0.12, was 0.09)
+- `damping`: Very high damping - instant snap back, no wobble (default: 0.95, was 0.94)
+- `repulsionRadius`: Very small radius for localized effect (default: 50px, was 60px)
+- `repulsionStrength`: Very weak push - max 10px displacement (default: 2.5, was 3.5)
 - `motionThreshold`: Minimum pixel difference to detect motion (default: 15)
-- `ambientIntensity`: Barely visible breathing - 1-2px movement (default: 1.2, was 2.5)
+- `ambientIntensity`: Minimal breathing - ~1px movement (default: 1.0, was 1.2)
 - `ambientSpeed`: Speed of ambient animation (default: 0.0015)
 - `colorTransitionSpeed`: Speed of gradient transitions (default: 0.05)
 
