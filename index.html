@@ -58,13 +58,13 @@
             handClosedThreshold: 0.1, // Distance threshold for fist detection
             bottomZoneHeight: 0.25, // Bottom 25% of screen
             contrastBoost: 2.0, // Greatly exaggerate brightness differences
-            // Physics parameters
-            springStiffness: 0.015, // How strongly dots return to origin
-            damping: 0.88, // Friction/energy loss (0-1, lower = more damping)
-            repulsionRadius: 80, // Distance at which motion affects dots
-            repulsionStrength: 12, // How strongly dots are pushed away
+            // Physics parameters - Tuned for subtle micro-fluctuations
+            springStiffness: 0.09, // High stiffness - dots tightly anchored (was 0.015)
+            damping: 0.94, // High damping - instant snap back, no wobble (was 0.88)
+            repulsionRadius: 60, // Smaller radius for localized effect (was 80)
+            repulsionStrength: 3.5, // Much weaker push - only 5-10px displacement (was 12)
             motionThreshold: 15, // Minimum pixel difference to detect motion
-            ambientIntensity: 2.5, // Background floating intensity
+            ambientIntensity: 1.2, // Barely visible breathing - 1-2px movement (was 2.5)
             ambientSpeed: 0.0015, // Speed of ambient animation
             colorTransitionSpeed: 0.05 // Speed of color gradient transitions
         };
@@ -480,20 +480,15 @@
             const isBottomZone = handPosition.y > mainCanvas.height * (1 - CONFIG.bottomZoneHeight);
 
             if (isHandClosed) {
-                // Closed fist = Add layer to stack
-                freezeFrame(true);
+                // Closed fist = Replace all layers with new freeze frame
+                layers = [];
+                freezeFrame();
                 lastGestureTime = now;
                 flashFeedback('#00FF00'); // Green flash
             } else if (isHandOpen) {
-                // Open hand gesture
-                if (isBottomZone) {
-                    // In bottom zone: add to stack
-                    freezeFrame(true);
-                } else {
-                    // Not in bottom zone: replace all layers
-                    layers = [];
-                    freezeFrame(false);
-                }
+                // Open hand = Replace all layers with new freeze frame
+                layers = [];
+                freezeFrame();
                 lastGestureTime = now;
                 flashFeedback('#FFFF00'); // Yellow flash
             }

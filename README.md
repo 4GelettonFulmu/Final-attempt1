@@ -5,33 +5,33 @@ A fullscreen, text-free interactive application that transforms live webcam foot
 ## Features
 
 ### Visual Style
-- **Liquid Physics Grid**: Dots behave like floating particles that react to movement
-- Real-time halftone dot pattern with interactive physics simulation
+- **Liquid Physics Grid**: Dots behave like floating particles with subtle micro-fluctuations
+- Real-time halftone dot pattern with low-latency physics simulation
 - Black background with vibrant color palette: bright red, blue, magenta, and green
 - Large, circular dots create a bold graphic style
 - Dramatic dot size variation: much larger dots for figures, minimal/no dots for background
 - Enhanced contrast algorithm creates striking visual separation
 - **Smooth gradient color transitions** between gesture actions (no flash overlays)
-- **Ambient motion**: Background dots gently float and breathe with sine wave animation
-- **Interactive ripples**: Dots scatter away from hand movements and bounce back
-- All halftone layers maintain 50% opacity for visual blending
+- **Subtle ambient motion**: Background dots gently breathe (1-2px movement, barely visible)
+- **Micro-ripples**: Dots shift only 5-10px when motion detected, instant snap back
+- Frozen layers display at 50% opacity for visual blending
 - Completely fullscreen with no UI elements or text
 
 ### Gesture Interactions
-- **Closed Fist**: Adds a frozen layer on top of existing layers
-- **Open Hand (top/middle area)**: Freezes current frame and replaces all layers with a new single layer
-- **Open Hand (bottom 25% of screen)**: Adds a frozen layer on top of existing layers
+- **Closed Fist**: Freezes current frame as a translucent halftone layer (replaces previous)
+- **Open Hand**: Freezes current frame as a translucent halftone layer (replaces previous)
 - **Smooth color transitions**: Each gesture triggers a gradient transition to the next color
 - Automatic color cycling through: red → blue → magenta → green → red
 - Visual hand position indicator (subtle circle) shows where your hand is detected
 - 1-second cooldown between gestures to prevent accidental triggers
-- **Motion-reactive dots**: Dots scatter away from hand movements and spring back
+- **Motion-reactive dots**: Subtle micro-ripples respond to hand movements (5-10px displacement)
 
-### Layering Behavior
-- Each frozen frame transforms into a semi-transparent halftone layer
-- Multiple swipes create overlapping compositions
-- Colors blend naturally through 50% transparency stacking
-- Maximum of 10 layers (oldest layer is removed when limit is reached)
+### Freeze Frame Behavior
+- Each gesture creates a new translucent halftone snapshot (50% opacity)
+- **Each freeze frame replaces the previous one** (no stacking)
+- Colors blend naturally through 50% transparency overlay
+- Live layer continues to move with physics while frozen layer remains static
+- Smooth gradient transitions between colors with each new freeze
 
 ## Usage
 
@@ -41,12 +41,12 @@ A fullscreen, text-free interactive application that transforms live webcam foot
 2. Grant camera permissions when prompted
 3. The application will automatically enter fullscreen mode
 4. Perform hand gestures in front of your camera:
-   - **Make a fist** (close your hand) to add a new layer on top of existing layers
-   - **Show an open hand** in the top/middle area to create a single layer (clears previous layers)
-   - **Show an open hand** in the bottom 25% of screen to add layers on top of existing ones
-5. Watch the **smooth gradient color transitions** as you create layers
+   - **Make a fist** (close your hand) to freeze the current frame
+   - **Show an open hand** to freeze the current frame
+   - Each freeze replaces the previous frozen layer
+5. Watch the **smooth gradient color transitions** as you create freeze frames
 6. A subtle circle indicator shows where your hand is detected
-7. Move your hand quickly to see the **interactive ripple effect** - dots scatter and bounce back
+7. Move your hand to see **subtle micro-ripples** - dots shift slightly (5-10px) and snap back instantly
 
 ### Keyboard Shortcuts
 
@@ -116,13 +116,13 @@ The application includes configurable parameters in the `CONFIG` object:
 - `colors`: Vibrant color array for black background (default: bright red, blue, magenta, green)
 - `contrastBoost`: Greatly exaggerates brightness differences (default: 2.0)
 
-**Physics Parameters:**
-- `springStiffness`: How strongly dots return to origin (default: 0.015)
-- `damping`: Friction/energy loss, 0-1 (default: 0.88)
-- `repulsionRadius`: Distance at which motion affects dots (default: 80px)
-- `repulsionStrength`: How strongly dots are pushed away (default: 12)
+**Physics Parameters (Tuned for Subtle Micro-Fluctuations):**
+- `springStiffness`: High stiffness - dots tightly anchored (default: 0.09, was 0.015)
+- `damping`: High damping - instant snap back, no wobble (default: 0.94, was 0.88)
+- `repulsionRadius`: Smaller radius for localized effect (default: 60px, was 80px)
+- `repulsionStrength`: Much weaker push - only 5-10px displacement (default: 3.5, was 12)
 - `motionThreshold`: Minimum pixel difference to detect motion (default: 15)
-- `ambientIntensity`: Background floating intensity (default: 2.5)
+- `ambientIntensity`: Barely visible breathing - 1-2px movement (default: 1.2, was 2.5)
 - `ambientSpeed`: Speed of ambient animation (default: 0.0015)
 - `colorTransitionSpeed`: Speed of gradient transitions (default: 0.05)
 
