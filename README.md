@@ -6,9 +6,10 @@ A fullscreen, text-free interactive application that transforms live webcam foot
 
 ### Visual Style
 - Real-time halftone dot pattern effect applied to live webcam feed
-- High-contrast color palette: dark red, blue, magenta, and green
+- Black background with vibrant color palette: bright red, blue, magenta, and green
 - Large, circular dots create a bold graphic style
-- Variable dot sizes: larger dots for figures (darker areas), smaller dots for background (lighter areas)
+- Dramatic dot size variation: much larger dots for figures, minimal/no dots for background
+- Enhanced contrast algorithm creates striking visual separation
 - Only one color displayed at a time
 - All halftone layers maintain 50% opacity for visual blending
 - Completely fullscreen with no UI elements or text
@@ -67,10 +68,11 @@ A fullscreen, text-free interactive application that transforms live webcam foot
 
 - **HalftoneLayer Class**: Each frozen layer contains:
   - Captured frame image data
-  - Color assignment from high-contrast palette
+  - Color assignment from vibrant palette optimized for black background
   - Pre-calculated halftone dots with brightness mapping
-  - Variable dot sizes: darker areas (figures) = larger dots, lighter areas (background) = smaller dots
-  - Contrast boost algorithm exaggerates differences between light and dark
+  - Dramatic dot size variation: figures = much larger dots, background = minimal/no dots
+  - Enhanced contrast boost algorithm (2.0x) greatly exaggerates differences
+  - Additional brightness scaling for figures creates even more separation
   - 50% opacity for blending
 
 - **Gesture Recognition**: Custom hand pose detection system
@@ -87,12 +89,12 @@ A fullscreen, text-free interactive application that transforms live webcam foot
 
 The application includes configurable parameters in the `CONFIG` object:
 
-- `dotSize`: Maximum size of halftone dots (default: 12px)
+- `dotSize`: Maximum size of halftone dots (default: 14px)
 - `dotSpacing`: Spacing between dot centers (default: 12px)
 - `maxLayers`: Maximum number of frozen layers (default: 10)
 - `layerOpacity`: Opacity of each layer (default: 0.5)
-- `colors`: High-contrast color array (default: dark red, blue, magenta, green)
-- `contrastBoost`: Exaggerates brightness differences (default: 1.4)
+- `colors`: Vibrant color array for black background (default: bright red, blue, magenta, green)
+- `contrastBoost`: Greatly exaggerates brightness differences (default: 2.0)
 - `bottomZoneHeight`: Height of bottom zone for stacking (default: 0.25 or 25%)
 - `gestureCooldown`: Milliseconds between gesture triggers (default: 1000ms)
 - `handClosedThreshold`: Distance threshold for fist detection (default: 0.1)

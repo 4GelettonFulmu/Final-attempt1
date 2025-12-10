@@ -13,7 +13,7 @@
         }
 
         body {
-            background: #fff;
+            background: #000;
             width: 100vw;
             height: 100vh;
             position: fixed;
@@ -49,15 +49,15 @@
     <script>
         // Configuration
         const CONFIG = {
-            dotSize: 12,
+            dotSize: 14,
             dotSpacing: 12,
             maxLayers: 10,
             layerOpacity: 0.5,
-            colors: ['#CC0000', '#0066CC', '#CC00CC', '#006600'], // High contrast: Dark red, blue, magenta, green
+            colors: ['#FF3333', '#3399FF', '#FF33FF', '#33FF33'], // Bright colors for black background
             gestureCooldown: 1000, // milliseconds between gesture triggers
             handClosedThreshold: 0.1, // Distance threshold for fist detection
             bottomZoneHeight: 0.25, // Bottom 25% of screen
-            contrastBoost: 1.4 // Exaggerate brightness differences
+            contrastBoost: 2.0 // Greatly exaggerate brightness differences
         };
 
         // Global variables
@@ -113,8 +113,13 @@
                 const avg = (r + g + b) / 3;
                 let brightness = 1 - (avg / 255); // Invert for halftone effect
 
-                // Apply contrast boost - exaggerate differences
+                // Apply strong contrast boost - greatly exaggerate differences
                 brightness = Math.pow(brightness, 1 / CONFIG.contrastBoost);
+
+                // Add minimum brightness boost for figures
+                if (brightness > 0.15) {
+                    brightness = 0.15 + (brightness - 0.15) * 1.3;
+                }
 
                 return Math.min(1, Math.max(0, brightness));
             }
@@ -217,8 +222,8 @@
 
         // Draw live halftone effect
         function drawLiveHalftone() {
-            // Clear canvas with white background
-            mainCtx.fillStyle = '#fff';
+            // Clear canvas with black background
+            mainCtx.fillStyle = '#000';
             mainCtx.fillRect(0, 0, mainCanvas.width, mainCanvas.height);
 
             // Draw video to debug canvas to extract pixel data
@@ -267,8 +272,13 @@
             const avg = (r + g + b) / 3;
             let brightness = 1 - (avg / 255);
 
-            // Apply contrast boost - exaggerate differences
+            // Apply strong contrast boost - greatly exaggerate differences
             brightness = Math.pow(brightness, 1 / CONFIG.contrastBoost);
+
+            // Add minimum brightness boost for figures
+            if (brightness > 0.15) {
+                brightness = 0.15 + (brightness - 0.15) * 1.3;
+            }
 
             return Math.min(1, Math.max(0, brightness));
         }
